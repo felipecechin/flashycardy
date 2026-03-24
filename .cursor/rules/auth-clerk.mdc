@@ -1,0 +1,56 @@
+---
+alwaysApply: true
+---
+
+# Authentication & Authorization with Clerk
+
+All authentication is handled by [Clerk](https://clerk.com/). Users must **only** be able to access their own data — never another user's.
+
+## Getting the Current User
+
+Always retrieve the authenticated user via Clerk's server helpers. Never trust user-supplied IDs from request bodies or query params as the source of truth for ownership.
+
+```ts
+import { auth } from "@clerk/nextjs/server";
+
+const { userId } = await auth();
+if (!userId) {
+  return new Response("Unauthorized", { status: 401 });
+}
+```
+
+## Enforcing Data Ownership
+
+Always filter database queries by the authenticated `userId`. Never fetch a resource by ID alone — always scope it to the current user.
+
+```ts
+// ❌ BAD — fetches any deck regardless of owner
+const deck = await db.query.decksTable.findFirst({
+  where: eq(decksTable.id, deckId),
+});
+
+// ✅ GOOD — scoped to the authenticated user
+const deck = await db.query.decksTable.findFirst({
+  where: and(eq(decksTable.id, deckId), eq(decksTable.userId, userId)),
+});
+```
+
+## Rules
+
+- **Always** call `auth()` at the start of every API route or server action that accesses data.
+- **Always** return a `401` response (or redirect) if `userId` is `null`.
+- **Always** include `eq(table.userId, userId)` in queries on user-owned tables (`decksTable`).
+- **Never** expose another user's data, even partially (e.g., do not leak IDs or counts).
+- For resources owned indirectly (e.g., `cardsTable` via `decksTable`), verify ownership by joining or pre-fetching the parent deck scoped to `userId`.
+
+## Indirect Ownership (Cards)
+
+Cards belong to decks, not directly to users. Always verify the parent deck belongs to the user before accessing its cards.
+
+```ts
+const deck = await db.query.decksTable.findFirst({
+  where: and(eq(decksTable.id, deckId), eq(decksTable.userId, userId)),
+  with: { cards: true },
+});
+if (!deck) return new Response("Not Found", { status: 404 });
+```

@@ -1,0 +1,61 @@
+---
+alwaysApply: true
+---
+
+# Database Interactions via Drizzle ORM
+
+All database interactions **must** use the Drizzle schema and query builder. Never write raw SQL strings or use any other database library.
+
+## Schema
+
+The schema is defined in [src/db/schema.ts](mdc:src/db/schema.ts) and exports the following tables:
+
+- `decksTable` — `decks` table with fields: `id`, `userId`, `name`, `description`, `createdAt`, `updatedAt`
+- `cardsTable` — `cards` table with fields: `id`, `deckId`, `front`, `back`, `createdAt`, `updatedAt`
+- `decksRelations` — `decks` has many `cards`
+- `cardsRelations` — each `card` belongs to one `deck`
+
+The db client is initialized in [src/db/index.ts](mdc:src/db/index.ts). Always import it from there.
+
+## Rules
+
+- **Always** import tables from `@/db/schema` and the db client from `@/db`.
+- **Always** use Drizzle's query builder (`.select()`, `.insert()`, `.update()`, `.delete()`, `.query.*`) — never raw SQL via `db.execute` or template strings unless there is no Drizzle equivalent.
+- **Always** use the relational query API (`db.query.decksTable.findMany(...)`) when fetching related data (e.g. a deck with its cards).
+- **Never** bypass the schema by constructing table/column names as strings.
+- When adding new tables or columns, update [src/db/schema.ts](mdc:src/db/schema.ts) and generate a migration before using them.
+
+## Examples
+
+```ts
+import { db } from "@/db";
+import { decksTable, cardsTable } from "@/db/schema";
+import { eq } from "drizzle-orm";
+
+// Select
+const decks = await db
+  .select()
+  .from(decksTable)
+  .where(eq(decksTable.userId, userId));
+
+// Insert
+const [deck] = await db
+  .insert(decksTable)
+  .values({ userId, name, description })
+  .returning();
+
+// Update
+await db
+  .update(cardsTable)
+  .set({ front, back })
+  .where(eq(cardsTable.id, cardId));
+
+// Delete
+await db.delete(decksTable).where(eq(decksTable.id, deckId));
+
+// Relational query
+const deckWithCards = await db.query.decksTable.findFirst({
+  where: eq(decksTable.id, deckId),
+  with: { cards: true },
+});
+```

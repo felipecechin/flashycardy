@@ -1,0 +1,59 @@
+---
+alwaysApply: true
+---
+
+# Data Fetching & Mutations
+
+## Data Retrieval — Server Components Only
+
+Always fetch data in React Server Components. Never fetch data on the client side (no `useEffect` + `fetch`, no SWR/React Query calling API routes for initial data).
+
+```tsx
+// ✅ GOOD — Server Component
+export default async function DecksPage() {
+  const { userId } = await auth();
+  const decks = await db.select().from(decksTable).where(eq(decksTable.userId, userId));
+  return <DeckList decks={decks} />;
+}
+
+// ❌ BAD — Client-side fetching
+"use client";
+useEffect(() => { fetch("/api/decks").then(...) }, []);
+```
+
+## Mutations — Server Actions Only
+
+All inserts, updates, and deletes must be implemented as Next.js Server Actions. Never use API routes (`/app/api/`) for mutations.
+
+```ts
+// ✅ GOOD — Server Action
+"use server";
+export async function createDeck(data: CreateDeckInput) { ... }
+
+// ❌ BAD — API route mutation
+// POST /api/decks/route.ts
+```
+
+## Validation — Zod Required
+
+All data passed to server actions must be:
+1. Validated with a Zod schema
+2. Typed with a TypeScript type derived from that schema (use `z.infer<>`)
+3. Never typed as `FormData`
+
+```ts
+import { z } from "zod";
+
+const createDeckSchema = z.object({
+  name: z.string().min(1).max(100),
+  description: z.string().max(500).optional(),
+});
+
+type CreateDeckInput = z.infer<typeof createDeckSchema>;
+
+export async function createDeck(data: CreateDeckInput) {
+  const parsed = createDeckSchema.safeParse(data);
+  if (!parsed.success) throw new Error("Invalid input");
+  // proceed with parsed.data
+}
+```
