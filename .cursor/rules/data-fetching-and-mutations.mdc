@@ -4,17 +4,54 @@ alwaysApply: true
 
 # Data Fetching & Mutations
 
+## Query & Mutation Helpers — `src/db/queries/`
+
+All database interactions must be extracted into dedicated helper functions living in `src/db/queries/`. Never write Drizzle queries inline inside Server Components or Server Actions — always call a helper from this directory instead.
+
+Organize files by domain (e.g. `src/db/queries/decks.ts`, `src/db/queries/cards.ts`). Each file exports typed async functions that encapsulate the query or mutation logic.
+
+```ts
+// src/db/queries/decks.ts
+import { db } from "@/db";
+import { decksTable } from "@/db/schema";
+import { eq, and } from "drizzle-orm";
+
+export async function getDecksByUser(userId: string) {
+  return db.select().from(decksTable).where(eq(decksTable.userId, userId));
+}
+
+export async function getDeckWithCards(deckId: string, userId: string) {
+  return db.query.decksTable.findFirst({
+    where: and(eq(decksTable.id, deckId), eq(decksTable.userId, userId)),
+    with: { cards: true },
+  });
+}
+
+export async function createDeck(userId: string, name: string, description?: string) {
+  const [deck] = await db
+    .insert(decksTable)
+    .values({ userId, name, description })
+    .returning();
+  return deck;
+}
+```
+
 ## Data Retrieval — Server Components Only
 
-Always fetch data in React Server Components. Never fetch data on the client side (no `useEffect` + `fetch`, no SWR/React Query calling API routes for initial data).
+Always fetch data in React Server Components by calling a helper from `src/db/queries/`. Never fetch data on the client side (no `useEffect` + `fetch`, no SWR/React Query calling API routes for initial data).
 
 ```tsx
-// ✅ GOOD — Server Component
+// ✅ GOOD — Server Component calling a query helper
+import { getDecksByUser } from "@/db/queries/decks";
+
 export default async function DecksPage() {
   const { userId } = await auth();
-  const decks = await db.select().from(decksTable).where(eq(decksTable.userId, userId));
+  const decks = await getDecksByUser(userId);
   return <DeckList decks={decks} />;
 }
+
+// ❌ BAD — inline Drizzle query in a Server Component
+const decks = await db.select().from(decksTable).where(eq(decksTable.userId, userId));
 
 // ❌ BAD — Client-side fetching
 "use client";
@@ -23,12 +60,21 @@ useEffect(() => { fetch("/api/decks").then(...) }, []);
 
 ## Mutations — Server Actions Only
 
-All inserts, updates, and deletes must be implemented as Next.js Server Actions. Never use API routes (`/app/api/`) for mutations.
+All inserts, updates, and deletes must be implemented as Next.js Server Actions that delegate to a helper in `src/db/queries/`. Never use API routes (`/app/api/`) for mutations, and never write Drizzle mutation logic directly inside a Server Action.
 
 ```ts
-// ✅ GOOD — Server Action
+// ✅ GOOD — Server Action calling a mutation helper
 "use server";
-export async function createDeck(data: CreateDeckInput) { ... }
+import { createDeck } from "@/db/queries/decks";
+
+export async function createDeckAction(data: CreateDeckInput) {
+  const parsed = createDeckSchema.safeParse(data);
+  if (!parsed.success) throw new Error("Invalid input");
+  return createDeck(userId, parsed.data.name, parsed.data.description);
+}
+
+// ❌ BAD — inline Drizzle insert inside a Server Action
+await db.insert(decksTable).values({ userId, name, description });
 
 // ❌ BAD — API route mutation
 // POST /api/decks/route.ts
@@ -51,9 +97,10 @@ const createDeckSchema = z.object({
 
 type CreateDeckInput = z.infer<typeof createDeckSchema>;
 
-export async function createDeck(data: CreateDeckInput) {
+export async function createDeckAction(data: CreateDeckInput) {
   const parsed = createDeckSchema.safeParse(data);
   if (!parsed.success) throw new Error("Invalid input");
-  // proceed with parsed.data
+  // delegate to query helper — no raw Drizzle here
+  return createDeck(userId, parsed.data.name, parsed.data.description);
 }
 ```

@@ -1,9 +1,12 @@
 ---
 alwaysApply: true
 ---
-# shadcn/ui Usage
 
-This project uses [shadcn/ui](https://ui.shadcn.com/) for **all** UI elements. Never use raw HTML elements or other UI libraries for components that shadcn/ui covers (buttons, inputs, dialogs, cards, etc.).
+# shadcn/ui Usage — MANDATORY
+
+This project uses [shadcn/ui](https://ui.shadcn.com/) for **every single UI element**. This is a hard requirement with **zero exceptions**.
+
+> **ABSOLUTE RULE: No custom UI components. No raw HTML elements. No other UI libraries. shadcn/ui only.**
 
 ## Initialization
 
@@ -29,7 +32,41 @@ import { Button } from "@/components/ui/button";
 
 ## Rules
 
-- **Always** use shadcn/ui components instead of plain HTML or other libraries.
+- **NEVER** create custom UI components from scratch. Always find the appropriate shadcn/ui component.
+- **NEVER** use raw HTML elements (`<button>`, `<input>`, `<div>` as UI containers, `<a>` as buttons, etc.) when a shadcn/ui component exists for that purpose.
+- **NEVER** use any other UI library (Radix directly, MUI, Chakra, Headless UI, etc.).
+- **ALWAYS** use shadcn/ui components — for buttons, inputs, dialogs, cards, badges, dropdowns, toasts, and every other UI primitive.
 - Before using a component, verify it exists in `src/components/ui/`. If it doesn't, install it with `npx shadcn@latest add <component-name>`.
 - Do **not** modify the generated files inside `src/components/ui/` directly — extend them via composition in feature components instead.
 - Refer to the [shadcn/ui component docs](https://ui.shadcn.com/docs/components) for available components and their APIs.
+- This project is in dark mode so make sure there are no dark colored text on dark backgrounds (and vice versa).
+
+## Clerk Authentication UI
+
+All Clerk sign-in and sign-up UI **must** follow these rules:
+
+- **NEVER** use Clerk's default `<SignInButton>` or `<SignUpButton>` rendered as-is. Always wrap them with a shadcn/ui `<Button>` as the child trigger.
+- **ALWAYS** use `mode="modal"` on `<SignInButton>` and `<SignUpButton>` so authentication opens in a modal overlay, not a redirect to a separate page.
+- The shadcn `<Button>` must be the `asChild` consumer or the direct child of the Clerk button component.
+
+```tsx
+// ✅ GOOD — Clerk modal with shadcn Button
+import { SignInButton, SignUpButton } from "@clerk/nextjs";
+import { Button } from "@/components/ui/button";
+
+<SignInButton mode="modal">
+  <Button variant="outline">Sign In</Button>
+</SignInButton>
+
+<SignUpButton mode="modal">
+  <Button>Get Started</Button>
+</SignUpButton>
+
+// ❌ BAD — raw Clerk button with no modal, no shadcn
+<SignInButton />
+
+// ❌ BAD — custom styled div/anchor acting as button
+<SignInButton mode="modal">
+  <div className="btn">Sign In</div>
+</SignInButton>
+```
