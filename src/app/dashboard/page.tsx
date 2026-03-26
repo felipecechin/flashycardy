@@ -8,9 +8,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { BookOpen, Plus, Layers } from "lucide-react";
+import { Plus, Layers } from "lucide-react";
+import Link from "next/link";
 
 export default async function DashboardPage() {
   const { userId } = await auth();
@@ -58,36 +58,35 @@ export default async function DashboardPage() {
         {decks.length > 0 && (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {decks.map((deck) => (
-              <Card
+              <Link
                 key={deck.id}
-                className="group cursor-pointer transition-colors hover:border-primary/50 hover:bg-accent/50"
+                href={`/decks/${deck.id}`}
+                className="group block focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 rounded-lg"
+                tabIndex={0}
               >
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between gap-2">
+                <Card className="w-full h-full cursor-pointer transition-colors hover:border-primary/50 hover:bg-accent/50">
+                  <CardHeader className="pb-3">
                     <CardTitle className="line-clamp-1 text-base">
                       {deck.name}
                     </CardTitle>
-                    <Badge variant="secondary" className="shrink-0 text-xs">
-                      {deck.cards.length} card{deck.cards.length !== 1 ? "s" : ""}
-                    </Badge>
-                  </div>
-                  {deck.description && (
-                    <CardDescription className="line-clamp-2 text-sm">
-                      {deck.description}
-                    </CardDescription>
-                  )}
-                </CardHeader>
-                <CardContent>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="w-full cursor-pointer gap-2 text-muted-foreground group-hover:text-foreground"
-                  >
-                    <BookOpen className="h-4 w-4" />
-                    Study
-                  </Button>
-                </CardContent>
-              </Card>
+                    {deck.description && (
+                      <CardDescription className="line-clamp-2 text-sm">
+                        {deck.description}
+                      </CardDescription>
+                    )}
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-xs text-muted-foreground">
+                      Updated{" "}
+                      {new Date(deck.updatedAt).toLocaleDateString(undefined, {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
             ))}
           </div>
         )}

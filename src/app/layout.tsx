@@ -9,6 +9,7 @@ import {
 } from "@clerk/nextjs";
 import { dark } from "@clerk/ui/themes";
 import { Button } from "@/components/ui/button";
+import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
 const poppins = Poppins({
@@ -28,8 +29,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
-      <body className={`${poppins.variable} antialiased`}>
+    <html lang="en" className={`dark ${poppins.variable}`}>
+      <body className="antialiased">
         <ClerkProvider
           appearance={{
             theme: dark,
@@ -61,6 +62,7 @@ export default function RootLayout({
             </div>
           </header>
           {children}
+          <Toaster richColors position="bottom-right" />
         </ClerkProvider>
       </body>
     </html>
