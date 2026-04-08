@@ -10,9 +10,12 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, CreditCard } from "lucide-react";
+import { ArrowLeft, CreditCard, BookOpen } from "lucide-react";
 import { AddCardModal } from "@/components/decks/add-card-modal";
 import { EditDeckModal } from "@/components/decks/edit-deck-modal";
+import { EditCardModal } from "@/components/decks/edit-card-modal";
+import { DeleteCardButton } from "@/components/decks/delete-card-button";
+import { DeleteDeckButton } from "@/components/decks/delete-deck-button";
 
 interface DeckPageProps {
   params: Promise<{ deckId: string }>;
@@ -62,12 +65,22 @@ export default async function DeckPage({ params }: DeckPageProps) {
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
+            <DeleteDeckButton deckId={deck.id} deckName={deck.name} />
             <EditDeckModal
               deckId={deck.id}
               currentName={deck.name}
               currentDescription={deck.description}
             />
             <AddCardModal deckId={deck.id} />
+            {cardCount > 0 && (
+              <Link
+                href={`/decks/${deckId}/study`}
+                className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-primary px-2.5 h-8 text-sm font-medium text-primary-foreground transition-all"
+              >
+                <BookOpen className="h-4 w-4" />
+                Study
+              </Link>
+            )}
           </div>
         </div>
 
@@ -96,9 +109,20 @@ export default async function DeckPage({ params }: DeckPageProps) {
                 className="flex flex-col overflow-hidden transition-colors hover:border-primary/50"
               >
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-                    Front
-                  </CardTitle>
+                  <div className="flex items-start justify-between gap-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+                      Front
+                    </CardTitle>
+                    <div className="flex items-center gap-0.5">
+                      <EditCardModal
+                        cardId={card.id}
+                        deckId={deck.id}
+                        currentFront={card.front}
+                        currentBack={card.back}
+                      />
+                      <DeleteCardButton cardId={card.id} deckId={deck.id} />
+                    </div>
+                  </div>
                   <p className="text-base font-medium leading-snug">
                     {card.front}
                   </p>

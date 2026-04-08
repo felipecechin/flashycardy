@@ -30,7 +30,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`dark ${poppins.variable}`}>
-      <body className="antialiased">
+      <body className="antialiased" suppressHydrationWarning>
         <ClerkProvider
           appearance={{
             theme: dark,

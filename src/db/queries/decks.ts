@@ -17,7 +17,11 @@ export async function getDecksByUserWithCards(userId: string) {
 export async function getDeckWithCards(deckId: number, userId: string) {
   return db.query.decksTable.findFirst({
     where: and(eq(decksTable.id, deckId), eq(decksTable.userId, userId)),
-    with: { cards: true },
+    with: {
+      cards: {
+        orderBy: (cards, { desc }) => [desc(cards.updatedAt)],
+      },
+    },
   });
 }
 

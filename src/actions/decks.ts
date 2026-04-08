@@ -3,8 +3,35 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { updateDeck } from "@/db/queries/decks";
-import { updateDeckSchema, type UpdateDeckInput } from "@/lib/schemas/decks";
+import { createDeck, updateDeck, deleteDeck } from "@/db/queries/decks";
+import {
+  createDeckSchema,
+  type CreateDeckInput,
+  updateDeckSchema,
+  type UpdateDeckInput,
+} from "@/lib/schemas/decks";
+
+export async function createDeckAction(data: CreateDeckInput) {
+  const { userId } = await auth();
+  if (!userId) redirect("/");
+
+  const parsed = createDeckSchema.safeParse(data);
+  if (!parsed.success) throw new Error("Invalid input");
+
+  const deck = await createDeck(userId, parsed.data.name, parsed.data.description);
+
+  revalidatePath("/dashboard");
+  return deck;
+}
+
+export async function deleteDeckAction(deckId: number) {
+  const { userId } = await auth();
+  if (!userId) redirect("/");
+
+  await deleteDeck(deckId, userId);
+
+  revalidatePath("/dashboard");
+}
 
 export async function updateDeckAction(deckId: number, data: UpdateDeckInput) {
   const { userId } = await auth();

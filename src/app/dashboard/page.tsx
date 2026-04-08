@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Plus, Layers } from "lucide-react";
 import Link from "next/link";
+import { CreateDeckModal } from "@/components/decks/create-deck-modal";
 
 export default async function DashboardPage() {
   const { userId } = await auth();
@@ -31,10 +32,7 @@ export default async function DashboardPage() {
                 : `${decks.length} deck${decks.length !== 1 ? "s" : ""} total`}
             </p>
           </div>
-          <Button className="cursor-pointer gap-2">
-            <Plus className="h-4 w-4" />
-            New Deck
-          </Button>
+          <CreateDeckModal />
         </div>
 
         {/* Empty state */}
@@ -46,10 +44,14 @@ export default async function DashboardPage() {
               <p className="mt-1 text-sm text-muted-foreground">
                 Create a deck to start studying with flashcards.
               </p>
-              <Button className="mt-6 cursor-pointer gap-2">
-                <Plus className="h-4 w-4" />
-                Create your first deck
-              </Button>
+              <CreateDeckModal
+                trigger={
+                  <Button className="mt-6 cursor-pointer gap-2">
+                    <Plus className="h-4 w-4" />
+                    Create your first deck
+                  </Button>
+                }
+              />
             </CardContent>
           </Card>
         )}
