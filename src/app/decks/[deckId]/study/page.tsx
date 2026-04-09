@@ -1,5 +1,5 @@
 import { auth } from "@clerk/nextjs/server";
-import { redirect, notFound } from "next/navigation";
+import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getDeckWithCards } from "@/db/queries/decks";
 import { ArrowLeft, CreditCard } from "lucide-react";
@@ -11,13 +11,11 @@ interface StudyPageProps {
 
 export default async function StudyPage({ params }: StudyPageProps) {
   const { userId } = await auth();
-  if (!userId) redirect("/");
-
   const { deckId } = await params;
   const deckIdNum = Number(deckId);
   if (isNaN(deckIdNum)) notFound();
 
-  const deck = await getDeckWithCards(deckIdNum, userId);
+  const deck = await getDeckWithCards(deckIdNum, userId!);
   if (!deck) notFound();
 
   return (

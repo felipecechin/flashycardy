@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Plus, Loader2, Lock } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
+import { Show } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -22,10 +23,10 @@ import { createDeckSchema, type CreateDeckInput } from "@/lib/schemas/decks";
 
 interface CreateDeckModalProps {
   trigger?: React.ReactNode;
-  atDeckLimit?: boolean;
+  deckCount?: number;
 }
 
-export function CreateDeckModal({ trigger, atDeckLimit }: CreateDeckModalProps) {
+export function CreateDeckModal({ trigger, deckCount = 0 }: CreateDeckModalProps) {
   const [open, setOpen] = useState(false);
 
   const {
@@ -59,32 +60,34 @@ export function CreateDeckModal({ trigger, atDeckLimit }: CreateDeckModalProps) 
     setOpen(nextOpen);
   }
 
-  if (atDeckLimit) {
-    return trigger ? (
-      <Link href="/pricing">{trigger}</Link>
-    ) : (
-      <Link href="/pricing">
-        <Button className="cursor-pointer gap-2" variant="outline">
-          <Lock className="h-4 w-4" />
-          Upgrade to Pro
-        </Button>
-      </Link>
-    );
-  }
+  const upgradeButton = trigger ? (
+    <Link href="/pricing">{trigger}</Link>
+  ) : (
+    <Link href="/pricing">
+      <Button className="cursor-pointer gap-2" variant="outline">
+        <Lock className="h-4 w-4" />
+        Upgrade to Pro
+      </Button>
+    </Link>
+  );
+
+  const createButton = trigger ? (
+    <span onClick={() => setOpen(true)}>{trigger}</span>
+  ) : (
+    <Button className="cursor-pointer gap-2" onClick={() => setOpen(true)}>
+      <Plus className="h-4 w-4" />
+      New Deck
+    </Button>
+  );
 
   return (
     <>
-      {trigger ? (
-        <span onClick={() => setOpen(true)}>{trigger}</span>
-      ) : (
-        <Button
-          className="cursor-pointer gap-2"
-          onClick={() => setOpen(true)}
-        >
-          <Plus className="h-4 w-4" />
-          New Deck
-        </Button>
-      )}
+      <Show
+        when={{ feature: "3_deck_limit" }}
+        fallback={createButton}
+      >
+        {deckCount >= 3 ? upgradeButton : createButton}
+      </Show>
 
       <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent className="sm:max-w-md">

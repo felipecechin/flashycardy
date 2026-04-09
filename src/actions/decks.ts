@@ -9,6 +9,7 @@ import {
   type CreateDeckInput,
   updateDeckSchema,
   type UpdateDeckInput,
+  deckIdSchema,
 } from "@/lib/schemas/decks";
 
 export async function createDeckAction(data: CreateDeckInput) {
@@ -35,7 +36,10 @@ export async function deleteDeckAction(deckId: number) {
   const { userId } = await auth();
   if (!userId) redirect("/");
 
-  await deleteDeck(deckId, userId);
+  const parsedId = deckIdSchema.safeParse(deckId);
+  if (!parsedId.success) throw new Error("Invalid deck ID");
+
+  await deleteDeck(parsedId.data, userId);
 
   revalidatePath("/dashboard");
 }
@@ -44,15 +48,18 @@ export async function updateDeckAction(deckId: number, data: UpdateDeckInput) {
   const { userId } = await auth();
   if (!userId) redirect("/");
 
+  const parsedId = deckIdSchema.safeParse(deckId);
+  if (!parsedId.success) throw new Error("Invalid deck ID");
+
   const parsed = updateDeckSchema.safeParse(data);
   if (!parsed.success) throw new Error("Invalid input");
 
-  const deck = await updateDeck(deckId, userId, {
+  const deck = await updateDeck(parsedId.data, userId, {
     name: parsed.data.name,
     description: parsed.data.description,
   });
 
-  revalidatePath(`/decks/${deckId}`);
+  revalidatePath(`/decks/${parsedId.data}`);
   revalidatePath("/dashboard");
   return deck;
 }

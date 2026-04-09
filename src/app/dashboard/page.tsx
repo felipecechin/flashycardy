@@ -17,7 +17,6 @@ import { CreateDeckModal } from "@/components/decks/create-deck-modal";
 export default async function DashboardPage() {
   const { userId, has } = await auth();
   if (!userId) redirect("/");
-
   const decks = await getDecksByUserWithCards(userId);
   const isFreePlan = has({ feature: "3_deck_limit" });
   const atDeckLimit = isFreePlan && decks.length >= 3;
@@ -35,7 +34,7 @@ export default async function DashboardPage() {
                 : `${decks.length} deck${decks.length !== 1 ? "s" : ""} total`}
             </p>
           </div>
-          <CreateDeckModal atDeckLimit={atDeckLimit} />
+          <CreateDeckModal deckCount={decks.length} />
         </div>
 
         {/* Free plan usage alert */}
@@ -77,7 +76,7 @@ export default async function DashboardPage() {
                 Create a deck to start studying with flashcards.
               </p>
               <CreateDeckModal
-                atDeckLimit={atDeckLimit}
+                deckCount={decks.length}
                 trigger={
                   <Button className="mt-6 cursor-pointer gap-2">
                     <Plus className="h-4 w-4" />

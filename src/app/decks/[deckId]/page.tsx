@@ -1,5 +1,5 @@
 import { auth } from "@clerk/nextjs/server";
-import { redirect, notFound } from "next/navigation";
+import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getDeckWithCards } from "@/db/queries/decks";
 import {
@@ -23,17 +23,13 @@ interface DeckPageProps {
 }
 
 export default async function DeckPage({ params }: DeckPageProps) {
-  const { userId, has } = await auth();
-  if (!userId) redirect("/");
-
-  const canUseAI =
-    has({ plan: "pro" }) && has({ feature: "ai_flashcard_generation" });
+  const { userId } = await auth();
 
   const { deckId } = await params;
   const deckIdNum = Number(deckId);
   if (isNaN(deckIdNum)) notFound();
 
-  const deck = await getDeckWithCards(deckIdNum, userId);
+  const deck = await getDeckWithCards(deckIdNum, userId!);
   if (!deck) notFound();
 
   const cardCount = deck.cards.length;
@@ -76,7 +72,6 @@ export default async function DeckPage({ params }: DeckPageProps) {
               currentDescription={deck.description}
             />
             <AIGenerateButton
-              canUseAI={canUseAI}
               deckId={deck.id}
               deckName={deck.name}
               deckDescription={deck.description ?? null}

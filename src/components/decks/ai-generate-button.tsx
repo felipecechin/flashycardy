@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Sparkles, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { Show } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -14,14 +15,12 @@ import {
 import { generateCardsWithAIAction } from "@/actions/cards";
 
 interface AIGenerateButtonProps {
-  canUseAI: boolean;
   deckId: number;
   deckName: string;
   deckDescription: string | null;
 }
 
 export function AIGenerateButton({
-  canUseAI,
   deckId,
   deckName,
   deckDescription,
@@ -32,11 +31,6 @@ export function AIGenerateButton({
   const hasDescription = !!deckDescription?.trim();
 
   async function handleGenerate() {
-    if (!canUseAI) {
-      router.push("/pricing");
-      return;
-    }
-
     setIsGenerating(true);
     try {
       await generateCardsWithAIAction(deckId, deckName, deckDescription);
@@ -72,9 +66,30 @@ export function AIGenerateButton({
     );
   }
 
-  // Has description and AI access — functional button, no tooltip needed
-  if (canUseAI) {
-    return (
+  // Has description — gate by AI feature client-side
+  return (
+    <Show
+      when={{ feature: "ai_flashcard_generation" }}
+      fallback={
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger render={<span className="inline-flex" />}>
+              <Button
+                variant="outline"
+                className="cursor-pointer gap-2"
+                onClick={() => router.push("/pricing")}
+              >
+                <Sparkles className="h-4 w-4" />
+                Generate with AI
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>This is a Pro feature. Click to upgrade.</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      }
+    >
       <Button
         variant="outline"
         className="cursor-pointer gap-2"
@@ -88,27 +103,6 @@ export function AIGenerateButton({
         )}
         {isGenerating ? "Generating…" : "Generate with AI"}
       </Button>
-    );
-  }
-
-  // Has description but no AI access — tooltip explains it's a Pro feature
-  return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger render={<span className="inline-flex" />}>
-          <Button
-            variant="outline"
-            className="cursor-pointer gap-2"
-            onClick={handleGenerate}
-          >
-            <Sparkles className="h-4 w-4" />
-            Generate with AI
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>
-          <p>This is a Pro feature. Click to upgrade.</p>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+    </Show>
   );
 }

@@ -9,6 +9,9 @@ import {
   type CreateCardInput,
   updateCardSchema,
   type UpdateCardInput,
+  cardIdSchema,
+  deckIdSchema,
+  generateCardsWithAISchema,
 } from "@/lib/schemas/cards";
 import { generateText, Output } from "ai";
 import { openai } from "@ai-sdk/openai";
@@ -18,12 +21,15 @@ export async function createCardAction(deckId: number, data: CreateCardInput) {
   const { userId } = await auth();
   if (!userId) redirect("/");
 
+  const parsedDeckId = deckIdSchema.safeParse(deckId);
+  if (!parsedDeckId.success) throw new Error("Invalid deck ID");
+
   const parsed = createCardSchema.safeParse(data);
   if (!parsed.success) throw new Error("Invalid input");
 
-  const card = await createCard(deckId, userId, parsed.data.front, parsed.data.back);
+  const card = await createCard(parsedDeckId.data, userId, parsed.data.front, parsed.data.back);
 
-  revalidatePath(`/decks/${deckId}`);
+  revalidatePath(`/decks/${parsedDeckId.data}`);
   return card;
 }
 
@@ -35,12 +41,18 @@ export async function updateCardAction(
   const { userId } = await auth();
   if (!userId) redirect("/");
 
+  const parsedCardId = cardIdSchema.safeParse(cardId);
+  if (!parsedCardId.success) throw new Error("Invalid card ID");
+
+  const parsedDeckId = deckIdSchema.safeParse(deckId);
+  if (!parsedDeckId.success) throw new Error("Invalid deck ID");
+
   const parsed = updateCardSchema.safeParse(data);
   if (!parsed.success) throw new Error("Invalid input");
 
-  const card = await updateCard(cardId, userId, parsed.data);
+  const card = await updateCard(parsedCardId.data, userId, parsed.data);
 
-  revalidatePath(`/decks/${deckId}`);
+  revalidatePath(`/decks/${parsedDeckId.data}`);
   return card;
 }
 
@@ -48,9 +60,15 @@ export async function deleteCardAction(cardId: number, deckId: number) {
   const { userId } = await auth();
   if (!userId) redirect("/");
 
-  await deleteCard(cardId, userId);
+  const parsedCardId = cardIdSchema.safeParse(cardId);
+  if (!parsedCardId.success) throw new Error("Invalid card ID");
 
-  revalidatePath(`/decks/${deckId}`);
+  const parsedDeckId = deckIdSchema.safeParse(deckId);
+  if (!parsedDeckId.success) throw new Error("Invalid deck ID");
+
+  await deleteCard(parsedCardId.data, userId);
+
+  revalidatePath(`/decks/${parsedDeckId.data}`);
 }
 
 const generatedCardsSchema = z.object({
@@ -70,6 +88,9 @@ export async function generateCardsWithAIAction(
   const { userId, has } = await auth();
   if (!userId) redirect("/");
 
+  const parsedInput = generateCardsWithAISchema.safeParse({ deckId, deckName, deckDescription });
+  if (!parsedInput.success) throw new Error("Invalid input");
+
   const canUseAI =
     has({ plan: "pro" }) && has({ feature: "ai_flashcard_generation" });
   if (!canUseAI) throw new Error("Upgrade to Pro to use AI flashcard generation.");
@@ -79,8 +100,8 @@ export async function generateCardsWithAIAction(
     output: Output.object({ schema: generatedCardsSchema }),
     prompt: `Generate 20 flashcards for the following study deck.
 
-Deck title: ${deckName}
-Deck description: ${deckDescription}
+Deck title: ${parsedInput.data.deckName}
+Deck description: ${parsedInput.data.deckDescription}
 
 Use the deck title and description to infer the most natural card format for this subject. Choose whatever front/back structure will make the cards most useful for studying — the format should fit the content, not the other way around.
 
@@ -91,7 +112,7 @@ Rules:
 - Do not include labels like "Front:" or "Back:" in the card content`,
   });
 
-  await createManyCards(deckId, userId, output.cards);
+  await createManyCards(parsedInput.data.deckId, userId, output.cards);
 
-  revalidatePath(`/decks/${deckId}`);
+  revalidatePath(`/decks/${parsedInput.data.deckId}`);
 }
