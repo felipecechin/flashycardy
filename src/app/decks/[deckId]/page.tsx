@@ -16,14 +16,18 @@ import { EditDeckModal } from "@/components/decks/edit-deck-modal";
 import { EditCardModal } from "@/components/decks/edit-card-modal";
 import { DeleteCardButton } from "@/components/decks/delete-card-button";
 import { DeleteDeckButton } from "@/components/decks/delete-deck-button";
+import { AIGenerateButton } from "@/components/decks/ai-generate-button";
 
 interface DeckPageProps {
   params: Promise<{ deckId: string }>;
 }
 
 export default async function DeckPage({ params }: DeckPageProps) {
-  const { userId } = await auth();
+  const { userId, has } = await auth();
   if (!userId) redirect("/");
+
+  const canUseAI =
+    has({ plan: "pro" }) && has({ feature: "ai_flashcard_generation" });
 
   const { deckId } = await params;
   const deckIdNum = Number(deckId);
@@ -64,12 +68,18 @@ export default async function DeckPage({ params }: DeckPageProps) {
             )}
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
             <DeleteDeckButton deckId={deck.id} deckName={deck.name} />
             <EditDeckModal
               deckId={deck.id}
               currentName={deck.name}
               currentDescription={deck.description}
+            />
+            <AIGenerateButton
+              canUseAI={canUseAI}
+              deckId={deck.id}
+              deckName={deck.name}
+              deckDescription={deck.description ?? null}
             />
             <AddCardModal deckId={deck.id} />
             {cardCount > 0 && (

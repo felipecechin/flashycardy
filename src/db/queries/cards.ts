@@ -50,3 +50,19 @@ export async function deleteCard(cardId: number, userId: string) {
 
   await db.delete(cardsTable).where(eq(cardsTable.id, cardId));
 }
+
+export async function createManyCards(
+  deckId: number,
+  userId: string,
+  cards: { front: string; back: string }[]
+) {
+  const deck = await db.query.decksTable.findFirst({
+    where: and(eq(decksTable.id, deckId), eq(decksTable.userId, userId)),
+  });
+  if (!deck) throw new Error("Deck not found");
+
+  return db
+    .insert(cardsTable)
+    .values(cards.map((c) => ({ deckId, front: c.front, back: c.back })))
+    .returning();
+}
