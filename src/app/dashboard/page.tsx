@@ -9,15 +9,18 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Layers } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Plus, Layers, TriangleAlert } from "lucide-react";
 import Link from "next/link";
 import { CreateDeckModal } from "@/components/decks/create-deck-modal";
 
 export default async function DashboardPage() {
-  const { userId } = await auth();
+  const { userId, has } = await auth();
   if (!userId) redirect("/");
 
   const decks = await getDecksByUserWithCards(userId);
+  const isFreePlan = has({ feature: "3_deck_limit" });
+  const atDeckLimit = isFreePlan && decks.length >= 3;
 
   return (
     <main className="min-h-screen pt-24 pb-16 px-6">
@@ -32,8 +35,37 @@ export default async function DashboardPage() {
                 : `${decks.length} deck${decks.length !== 1 ? "s" : ""} total`}
             </p>
           </div>
-          <CreateDeckModal />
+          <CreateDeckModal atDeckLimit={atDeckLimit} />
         </div>
+
+        {/* Free plan usage alert */}
+        {isFreePlan && (
+          <Alert variant={atDeckLimit ? "destructive" : "default"} className="mb-6">
+            <TriangleAlert className="h-4 w-4" />
+            <AlertTitle>
+              {atDeckLimit ? "Deck limit reached" : "Free plan"}
+            </AlertTitle>
+            <AlertDescription>
+              {atDeckLimit ? (
+                <>
+                  You&apos;ve used all 3 decks on the free plan.{" "}
+                  <Link href="/pricing" className="font-medium underline underline-offset-4">
+                    Upgrade to Pro
+                  </Link>{" "}
+                  for unlimited decks.
+                </>
+              ) : (
+                <>
+                  {decks.length} / 3 decks used.{" "}
+                  <Link href="/pricing" className="font-medium underline underline-offset-4">
+                    Upgrade to Pro
+                  </Link>{" "}
+                  for unlimited decks.
+                </>
+              )}
+            </AlertDescription>
+          </Alert>
+        )}
 
         {/* Empty state */}
         {decks.length === 0 && (
@@ -45,6 +77,7 @@ export default async function DashboardPage() {
                 Create a deck to start studying with flashcards.
               </p>
               <CreateDeckModal
+                atDeckLimit={atDeckLimit}
                 trigger={
                   <Button className="mt-6 cursor-pointer gap-2">
                     <Plus className="h-4 w-4" />

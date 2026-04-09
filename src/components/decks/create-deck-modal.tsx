@@ -3,8 +3,9 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Loader2 } from "lucide-react";
+import { Plus, Loader2, Lock } from "lucide-react";
 import { toast } from "sonner";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -21,9 +22,10 @@ import { createDeckSchema, type CreateDeckInput } from "@/lib/schemas/decks";
 
 interface CreateDeckModalProps {
   trigger?: React.ReactNode;
+  atDeckLimit?: boolean;
 }
 
-export function CreateDeckModal({ trigger }: CreateDeckModalProps) {
+export function CreateDeckModal({ trigger, atDeckLimit }: CreateDeckModalProps) {
   const [open, setOpen] = useState(false);
 
   const {
@@ -42,14 +44,32 @@ export function CreateDeckModal({ trigger }: CreateDeckModalProps) {
       setOpen(false);
       reset();
       toast.success("Deck created!");
-    } catch {
-      toast.error("Failed to create deck. Please try again.");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "";
+      if (message === "DECK_LIMIT_REACHED") {
+        toast.error("You've reached the 3-deck limit. Upgrade to Pro for unlimited decks.");
+      } else {
+        toast.error("Failed to create deck. Please try again.");
+      }
     }
   }
 
   function handleOpenChange(nextOpen: boolean) {
     if (!nextOpen) reset();
     setOpen(nextOpen);
+  }
+
+  if (atDeckLimit) {
+    return trigger ? (
+      <Link href="/pricing">{trigger}</Link>
+    ) : (
+      <Link href="/pricing">
+        <Button className="cursor-pointer gap-2" variant="outline">
+          <Lock className="h-4 w-4" />
+          Upgrade to Pro
+        </Button>
+      </Link>
+    );
   }
 
   return (

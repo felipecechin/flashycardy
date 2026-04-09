@@ -1,0 +1,75 @@
+---
+alwaysApply: true
+---
+
+# Clerk Billing
+
+All subscriptions and payments are handled by Clerk Billing. Never use Stripe directly or any other payment library.
+
+## Plans & Features
+
+**Plans available:**
+- `free_user` — default free plan
+- `pro` — paid plan
+
+**Features available:**
+- `3_deck_limit` — user is limited to 3 decks
+- `unlimited_decks` — user can create unlimited decks
+- `ai_flashcard_generation` — user can generate flashcards with AI
+
+## Checking Access — Server Side
+
+Use `has()` from the `auth()` object in Server Components and Server Actions:
+
+```tsx
+import { auth } from '@clerk/nextjs/server'
+
+const { has } = await auth()
+
+const isPro = has({ plan: 'pro' })
+const canUseAI = has({ feature: 'ai_flashcard_generation' })
+const hasUnlimitedDecks = has({ feature: 'unlimited_decks' })
+```
+
+## Checking Access — Client Side
+
+Use the `<Show>` component to conditionally render UI based on plan or feature:
+
+```tsx
+import { Show } from '@clerk/nextjs'
+
+// Gate by plan
+<Show when={{ plan: 'pro' }} fallback={<p>Upgrade to Pro to access this.</p>}>
+  <ProFeature />
+</Show>
+
+// Gate by feature
+<Show when={{ feature: 'ai_flashcard_generation' }} fallback={<UpgradePrompt />}>
+  <AIGenerateButton />
+</Show>
+```
+
+## Pricing Page
+
+Use the `<PricingTable />` component on a dedicated `/pricing` page:
+
+```tsx
+// app/pricing/page.tsx
+import { PricingTable } from '@clerk/nextjs'
+
+export default function PricingPage() {
+  return (
+    <div style={{ maxWidth: '800px', margin: '0 auto', padding: '0 1rem' }}>
+      <PricingTable />
+    </div>
+  )
+}
+```
+
+## Rules
+
+- **Never** write custom billing or subscription logic — always rely on Clerk Billing.
+- **Always** use `has()` server-side for gating data access or server actions.
+- **Always** use `<Show>` client-side for conditionally rendering UI elements.
+- **Never** trust client-supplied plan/feature data — always derive it from `auth()` on the server.
+- When enforcing the deck limit, check `has({ feature: '3_deck_limit' })` and count existing decks before allowing creation.

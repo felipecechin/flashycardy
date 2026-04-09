@@ -3,7 +3,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { createDeck, updateDeck, deleteDeck } from "@/db/queries/decks";
+import { createDeck, updateDeck, deleteDeck, getDecksByUser } from "@/db/queries/decks";
 import {
   createDeckSchema,
   type CreateDeckInput,
@@ -12,11 +12,18 @@ import {
 } from "@/lib/schemas/decks";
 
 export async function createDeckAction(data: CreateDeckInput) {
-  const { userId } = await auth();
+  const { userId, has } = await auth();
   if (!userId) redirect("/");
 
   const parsed = createDeckSchema.safeParse(data);
   if (!parsed.success) throw new Error("Invalid input");
+
+  if (has({ feature: "3_deck_limit" })) {
+    const existingDecks = await getDecksByUser(userId);
+    if (existingDecks.length >= 3) {
+      throw new Error("DECK_LIMIT_REACHED");
+    }
+  }
 
   const deck = await createDeck(userId, parsed.data.name, parsed.data.description);
 

@@ -1,0 +1,63 @@
+---
+description: How to use the Vercel AI SDK with OpenAI for AI flashcard generation
+alwaysApply: false
+---
+
+# AI Flashcard Generation with Vercel AI SDK
+
+Use `generateText` with `Output.object` from the `ai` package and `@ai-sdk/openai` for all AI-powered flashcard generation. Never use the OpenAI SDK directly.
+
+## Generating Flashcards
+
+```ts
+import { generateText, Output } from 'ai';
+import { openai } from '@ai-sdk/openai';
+import { z } from 'zod';
+
+const cardSchema = z.object({
+  cards: z.array(
+    z.object({
+      front: z.string(),
+      back: z.string(),
+    })
+  ),
+});
+
+const { output } = await generateText({
+  model: openai('gpt-4o'),
+  output: Output.object({ schema: cardSchema }),
+  prompt: `Generate ${count} flashcards about: ${topic}`,
+});
+
+// output.cards is typed as { front: string; back: string }[]
+```
+
+## Access Gating — Premium Feature
+
+AI flashcard generation is a **pro-only feature**. Always enforce both the plan and the feature flag server-side before invoking the model:
+
+```ts
+import { auth } from '@clerk/nextjs/server';
+
+const { has } = await auth();
+const canUseAI = has({ plan: 'pro' }) && has({ feature: 'ai_flashcard_generation' });
+if (!canUseAI) throw new Error('Upgrade to Pro to use AI flashcard generation.');
+```
+
+On the client, use `<Show>` to conditionally render the AI generation UI:
+
+```tsx
+import { Show } from '@clerk/nextjs';
+
+<Show when={{ feature: 'ai_flashcard_generation' }} fallback={<UpgradePrompt />}>
+  <AIGenerateButton />
+</Show>
+```
+
+## Rules
+
+- **Always** use `generateText` + `Output.object` for structured flashcard output — never parse raw text.
+- **Always** gate AI generation behind both `has({ plan: 'pro' })` and `has({ feature: 'ai_flashcard_generation' })` on the server before calling the model.
+- **Never** call the OpenAI API directly — always go through `@ai-sdk/openai`.
+- Place AI generation logic in a Server Action; never call it from client-side code.
+- **Never** trust client-supplied plan or feature data — always derive access from `auth()` on the server.
