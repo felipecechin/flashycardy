@@ -71,11 +71,7 @@ export default async function DeckPage({ params }: DeckPageProps) {
               currentName={deck.name}
               currentDescription={deck.description}
             />
-            <AIGenerateButton
-              deckId={deck.id}
-              deckName={deck.name}
-              deckDescription={deck.description ?? null}
-            />
+            <AIGenerateButton />
             <AddCardModal deckId={deck.id} />
             {cardCount > 0 && (
               <Link

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -51,6 +51,9 @@ export function StudySession({ deckId, deckName, cards }: StudySessionProps) {
   const [isFlipped, setIsFlipped] = useState(false);
   const [results, setResults] = useState<Results>({});
   const [isComplete, setIsComplete] = useState(false);
+  // Holds the card change to apply once the flip-back transition finishes,
+  // so the next card's content never swaps in while its back is still facing the viewer.
+  const pendingActionRef = useRef<(() => void) | null>(null);
 
   const currentCard = deck[currentIndex];
   const gradedCount = Object.keys(results).length;
@@ -62,21 +65,41 @@ export function StudySession({ deckId, deckName, cards }: StudySessionProps) {
     setIsFlipped((f) => !f);
   }, []);
 
+  const runAfterFlipBack = useCallback(
+    (action: () => void) => {
+      if (isFlipped) {
+        pendingActionRef.current = action;
+        setIsFlipped(false);
+      } else {
+        action();
+      }
+    },
+    [isFlipped]
+  );
+
+  const handleTransitionEnd = useCallback((e: React.TransitionEvent) => {
+    if (e.propertyName !== "transform" || !pendingActionRef.current) return;
+    const action = pendingActionRef.current;
+    pendingActionRef.current = null;
+    action();
+  }, []);
+
   const handleNext = useCallback(() => {
-    if (currentIndex + 1 >= deck.length) {
-      setIsComplete(true);
-    } else {
-      setCurrentIndex((i) => i + 1);
-      setIsFlipped(false);
-    }
-  }, [currentIndex, deck.length]);
+    runAfterFlipBack(() => {
+      if (currentIndex + 1 >= deck.length) {
+        setIsComplete(true);
+      } else {
+        setCurrentIndex((i) => i + 1);
+      }
+    });
+  }, [runAfterFlipBack, currentIndex, deck.length]);
 
   const handlePrev = useCallback(() => {
-    if (currentIndex > 0) {
+    if (currentIndex === 0) return;
+    runAfterFlipBack(() => {
       setCurrentIndex((i) => i - 1);
-      setIsFlipped(false);
-    }
-  }, [currentIndex]);
+    });
+  }, [runAfterFlipBack, currentIndex]);
 
   const handleResult = useCallback(
     (result: CardResult) => {
@@ -215,6 +238,7 @@ export function StudySession({ deckId, deckName, cards }: StudySessionProps) {
             transform: isFlipped ? "rotateY(180deg)" : "rotateY(0deg)",
             minHeight: "320px",
           }}
+          onTransitionEnd={handleTransitionEnd}
         >
           {/* Front */}
           <Card
